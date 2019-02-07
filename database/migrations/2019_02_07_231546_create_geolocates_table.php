@@ -23,10 +23,6 @@ class CreateGeolocatesTable extends Migration
             $table->timestamps();
         });
 
-        Schema::create('geolocates', function (Blueprint $table) {
-            $table->foreign('city_id')->references('id')->on('cities')->onDelete('cascade');
-            $table->foreign('region_id')->references('id')->on('regions')->onDelete('cascade');
-        });
     }
 
     /**
@@ -36,10 +32,6 @@ class CreateGeolocatesTable extends Migration
      */
     public function down()
     {
-        Schema::create('geolocates', function (Blueprint $table) {
-            $table->dropForeign(['city_id']);
-            $table->dropForeign(['region_id']);
-        });
         Schema::dropIfExists('geolocates');
     }
 }

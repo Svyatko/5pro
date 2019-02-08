@@ -25,7 +25,12 @@ class Geo extends Model
 
         $input['address'] = self::getAddress($data);
         $input['city_id'] = self::getInstanceId(City::class, self::getCity($data));
-        $input['region_id'] = self::getInstanceId(Region::class, self::getRegion($data));
+
+        if(!self::getInstanceId(Region::class, self::getRegion($data))) {
+            $input['city_id'] = self::getInstanceId(City::class, self::getCity($data));
+        } else {
+            $input['region_id'] = self::getInstanceId(Region::class, self::getRegion($data));
+        }
 
         return self::create($input);
     }
@@ -34,7 +39,7 @@ class Geo extends Model
         $key = self::$key;
 
         $url  = "https://maps.googleapis.com/maps/api/geocode/json?latlng=".$lat.",".$lng."&sensor=false&key=$key";
-        $json = @file_get_contents($url);
+        $json = file_get_contents($url);
         $data = json_decode($json);
 
         return $data;
@@ -45,23 +50,33 @@ class Geo extends Model
     }
 
     public static function getCity($data) {
-        return $data->results[0]->address_components[3]->long_name;
+        return self::getByKey($data, 'locality');
     }
 
     public static function getRegion($data) {
-        if(isset($data->results[0]->address_components[5]->long_name)) {
-            return $data->results[0]->address_components[5]->long_name;
-        } else {
-            return $data->results[0]->address_components[2]->long_name;
-        }
+        return self::getByKey($data, 'administrative_area_level_1');
     }
 
     public static function getInstanceId($model, $name) {
-        $city = $model::where('name', $name)->first();
-        if($city) {
-            return $city->id;
-        } else {
-            return $model::create(['name' => $name])->id;
+        if($name) {
+            $city = $model::where('name', $name)->first();
+            if($city) {
+                return $city->id;
+            } else {
+                return $model::create(['name' => $name])->id;
+            }
+        }
+    }
+
+    public static function getByKey($data, $string) {
+        foreach ($data->results[0]->address_components as $item) {
+            if(count($item->types) > 1) {
+                foreach ($item->types as $type) {
+                    if($type == $string) {
+                        return $item->long_name;
+                    }
+                }
+            }
         }
     }
 }
